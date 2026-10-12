@@ -10,6 +10,21 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <style>
+    .site-footer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      height: 4.8em; /* Altura equivalente a unas 3 líneas de texto */
+      line-height: 1.6em;
+      margin-top: 40px;
+      font-size: 14px;
+      color: var(--soft, #646b8f);
+      font-weight: 600;
+      border-top: 1px solid var(--line, #e7eaf6);
+    }
+  </style>
 </head>
 <body>
 
@@ -79,6 +94,10 @@
       <div id="history"></div>
     </section>
   </main>
+
+  <footer class="site-footer">
+    powered by Iván Blasco
+  </footer>
 </div>
 
 <dialog id="settings" class="modal">
