@@ -27,7 +27,7 @@ export default async (req) => {
   if (req.method !== "POST") return json({ error: "Método no permitido" }, 405);
   if (!authOk(req)) return json({ error: "PIN incorrecto" }, 401);
 
-  const apiKey = Netlify.env.get("GEMINI_API_KEY");
+  const apiKey = (Netlify.env.get("GEMINI_API_KEY") || "").trim();
   if (!apiKey) return json({ error: "Falta configurar GEMINI_API_KEY en Netlify" }, 500);
 
   const { image, text, profile, meal } = await req.json();
@@ -43,28 +43,42 @@ export default async (req) => {
   if (image) parts.push({ inline_data: { mime_type: "image/jpeg", data: image } });
   parts.push({ text: context });
 
-  const model = Netlify.env.get("GEMINI_MODEL") || "gemini-2.5-flash";
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-    {
+  const model = (Netlify.env.get("GEMINI_MODEL") || "gemini-2.5-flash").trim();
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+  const body = JSON.stringify({
+    system_instruction: { parts: [{ text: SYSTEM }] },
+    contents: [{ role: "user", parts }],
+    generationConfig: {
+      responseMimeType: "application/json",
+      maxOutputTokens: 2048,
+      temperature: 0.4,
+      thinkingConfig: { thinkingBudget: 0 }, // sin "pensar": más rápido y no gasta tokens de la respuesta
+    },
+  });
+
+  let res;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    res = await fetch(url, {
       method: "POST",
       headers: { "x-goog-api-key": apiKey, "content-type": "application/json" },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: SYSTEM }] },
-        contents: [{ role: "user", parts }],
-        generationConfig: {
-          responseMimeType: "application/json",
-          maxOutputTokens: 1500,
-          temperature: 0.4,
-        },
-      }),
-    }
-  );
+      body,
+    });
+    if (res.ok || ![429, 500, 503].includes(res.status)) break;
+    await new Promise((r) => setTimeout(r, 1200)); // un reintento si Google está saturado
+  }
 
   if (!res.ok) {
     const detail = await res.text();
     console.error("Gemini error", res.status, detail);
-    return json({ error: "No he podido analizar el plato ahora mismo. Inténtalo de nuevo." }, 502);
+    let googleMsg = "";
+    try { googleMsg = JSON.parse(detail)?.error?.message || ""; } catch {}
+    const hint =
+      res.status === 400 ? "Clave de API no válida o petición incorrecta" :
+      res.status === 403 ? "La clave no tiene permiso (revisa que sea de Google AI Studio)" :
+      res.status === 404 ? `El modelo "${model}" no existe o no está disponible` :
+      res.status === 429 ? "Se ha alcanzado el límite gratuito de Gemini. Espera un minuto" :
+      "Gemini no responde ahora mismo";
+    return json({ error: `${hint} (error ${res.status}). ${googleMsg}`.trim().slice(0, 300) }, 502);
   }
 
   const data = await res.json();
