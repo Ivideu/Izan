@@ -1,10 +1,13 @@
 import { getStore } from "@netlify/blobs";
-import { json } from "../lib/auth.mjs";
+import { authOk, json } from "../lib/auth.mjs";
 
 const MAX_ENTRIES = 400;
+const MEALS = ["Desayuno", "Comida", "Cena"];
 const DEFAULT_PROFILE = { name: "", age: 13, height: 160, weight: 69 };
 
 export default async (req) => {
+  if (!authOk(req)) return json({ error: "PIN incorrecto" }, 401);
+
   const store = getStore("platopower");
   const entries = (await store.get("entries", { type: "json" })) || [];
   const profile = (await store.get("profile", { type: "json" })) || DEFAULT_PROFILE;
@@ -33,8 +36,22 @@ export default async (req) => {
     return json({ ok: true, profile: clean });
   }
 
+  if (req.method === "PATCH") {
+    const { id, meal } = await req.json().catch(() => ({}));
+    if (!id || !MEALS.includes(meal)) return json({ error: "Datos no válidos" }, 400);
+    if (!entries.some((e) => e.id === id)) return json({ error: "No encuentro ese plato" }, 404);
+    const next = entries.map((e) => (e.id === id ? { ...e, meal } : e));
+    await store.setJSON("entries", next);
+    return json({ ok: true, entries: next });
+  }
+
   if (req.method === "DELETE") {
-    return json({ error: "Los platos guardados no se pueden borrar" }, 403);
+    const { id } = await req.json().catch(() => ({}));
+    if (!id) return json({ error: "Falta el plato a eliminar" }, 400);
+    if (!entries.some((e) => e.id === id)) return json({ error: "No encuentro ese plato" }, 404);
+    const next = entries.filter((e) => e.id !== id);
+    await store.setJSON("entries", next);
+    return json({ ok: true, entries: next });
   }
 
   return json({ error: "Método no permitido" }, 405);

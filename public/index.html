@@ -75,7 +75,7 @@
 
         <div class="chips" id="meal-chips" role="radiogroup" aria-label="Momento del día">
           <button class="chip" data-meal="Desayuno" type="button">🥣 Desayuno</button>
-          <button class="chip" data-meal="Almuerzo" type="button">🍝 Comida</button>
+          <button class="chip" data-meal="Comida" type="button">🍝 Comida</button>
           <button class="chip" data-meal="Cena" type="button">🍽️ Cena</button>
         </div>
 
@@ -125,6 +125,17 @@
     <div class="actions">
       <button class="btn btn-main" value="save" id="s-save" type="submit">Guardar</button>
       <button class="btn btn-ghost" value="cancel" type="submit">Cerrar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="confirm-del" class="modal">
+  <form method="dialog">
+    <h3>¿Eliminar este plato?</h3>
+    <p class="muted" id="confirm-del-text">Se borrará de tu historial en todos tus dispositivos y no se puede deshacer.</p>
+    <div class="actions">
+      <button class="btn btn-danger" value="yes" type="submit">Sí, eliminar</button>
+      <button class="btn btn-ghost" value="no" type="submit">No, mantener</button>
     </div>
   </form>
 </dialog>

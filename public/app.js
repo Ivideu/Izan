@@ -371,16 +371,77 @@ function renderHistory() {
   container.innerHTML = html;
 }
 
+const MEALS = [["Desayuno", "🥣"], ["Comida", "🍝"], ["Cena", "🍽️"]];
+
+function manageBar(entry) {
+  const cur = mealName(entry.meal);
+  const chips = MEALS.map(([m, ico]) =>
+    `<button class="chip ${m === cur ? "is-on" : ""}" data-set-meal="${m}" type="button">${ico} ${m}</button>`).join("");
+  return `<div class="card manage">
+    <h3>✏️ Momento del día</h3>
+    <div class="chips" role="radiogroup" aria-label="Cambiar momento del día">${chips}</div>
+    <button class="del" data-del type="button">🗑️ Eliminar este plato</button>
+  </div>`;
+}
+
+function fillDetail(card) {
+  const entry = state.entries.find((x) => x.id === card.dataset.id); if (!entry) return;
+  $(".entry-detail", card).innerHTML = manageBar(entry) + renderResult(entry.result, entry.meal);
+}
+
+function openCard(id) {
+  const card = $(`.entry[data-id="${CSS.escape(id)}"]`); if (!card) return;
+  card.classList.add("open"); fillDetail(card);
+}
+
+function persistCache() {
+  try { localStorage.setItem(LS.cache, JSON.stringify({ entries: state.entries, profile: state.profile })); } catch {}
+}
+
+async function changeMeal(id, meal) {
+  const entry = state.entries.find((x) => x.id === id);
+  if (!entry || mealName(entry.meal) === meal) return;
+  try {
+    const d = await api("/api/history", { method: "PATCH", body: JSON.stringify({ id, meal }) });
+    state.entries = d.entries; setSync(true); persistCache();
+    renderToday(); renderHistory(); openCard(id);
+    toast(`Cambiado a ${meal} ✅`);
+  } catch (err) { toast(err.message || "No se pudo cambiar"); }
+}
+
+let pendingDelete = null;
+function askDelete(id) {
+  const entry = state.entries.find((x) => x.id === id); if (!entry) return;
+  pendingDelete = id;
+  $("#confirm-del-text").textContent =
+    `"${entry.result?.title || "Este plato"}" se borrará de tu historial en todos tus dispositivos y no se puede deshacer.`;
+  $("#confirm-del").showModal();
+}
+
+const confirmDel = $("#confirm-del");
+if (confirmDel) {
+  confirmDel.addEventListener("close", async () => {
+    const id = pendingDelete; pendingDelete = null;
+    if (confirmDel.returnValue !== "yes" || !id) return;
+    try {
+      const d = await api("/api/history", { method: "DELETE", body: JSON.stringify({ id }) });
+      state.entries = d.entries; setSync(true); persistCache();
+      renderToday(); renderHistory();
+      toast("Plato eliminado 🗑️");
+    } catch (err) { toast(err.message || "No se pudo eliminar"); }
+  });
+}
+
 const historyEl = $("#history");
 if (historyEl) {
-  historyEl.addEventListener("click", (e) => {
-    const card = e.target.closest(".entry"); if (!card || e.target.closest(".entry-detail")) return;
+  historyEl.addEventListener("click", async (e) => {
+    const card = e.target.closest(".entry"); if (!card) return;
+    const mealBtn = e.target.closest("[data-set-meal]");
+    if (mealBtn) { await changeMeal(card.dataset.id, mealBtn.dataset.setMeal); return; }
+    if (e.target.closest("[data-del]")) { askDelete(card.dataset.id); return; }
+    if (e.target.closest(".entry-detail")) return;
     const open = card.classList.toggle("open");
-    const detail = $(".entry-detail", card);
-    if (open) {
-      const entry = state.entries.find((x) => x.id === card.dataset.id);
-      detail.innerHTML = renderResult(entry.result, entry.meal);
-    } else detail.innerHTML = "";
+    if (open) fillDetail(card); else $(".entry-detail", card).innerHTML = "";
   });
 }
 
