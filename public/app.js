@@ -1,6 +1,6 @@
 "use strict";
 
-const $ = (s, r = document) => r.querySelector(s); const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const $= (s, r = document) => r.querySelector(s); const$$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const num = (n) => Math.round(Number(n) || 0);
 
@@ -181,12 +181,7 @@ function resetScan() {
   if ($("#preview")) { $("#preview").hidden = true; $("#preview").src = ""; }
   if ($("#drop-empty")) $("#drop-empty").hidden = false;
   if ($("#reset")) $("#reset").hidden = true;
-  if ($("#result")) $("#result").innerHTML = "";
-}
-
-/* ---------------- Chips ---------------- */
-function renderChips() {
-  $$("#meal-chips .chip").forEach((c) => c.classList.toggle("is-on", c.dataset.meal === state.meal));
+  if ($("#result")) $("#result").innerHTML = ""; }  /* ---------------- Chips ---------------- */ function renderChips() {   $$("#meal-chips .chip").forEach((c) => c.classList.toggle("is-on", c.dataset.meal === state.meal));
 }
 
 const mealChips = $("#meal-chips");
@@ -373,21 +368,33 @@ function renderHistory() {
 
 const historyEl = $("#history");
 if (historyEl) {
-  historyEl.addEventListener("click", (e) => {
+  historyEl.addEventListener("click", async (e) => {
+    // Si se hace clic en el botón de borrar dentro de los detalles
+    const delBtn = e.target.closest("[data-del]");
+    if (delBtn) {
+      if (!confirm("¿Borrar este plato del historial?")) return;
+      try {
+        const d = await api("/api/history?id=" + encodeURIComponent(delBtn.dataset.del), { method: "DELETE" });
+        state.entries = d.entries; renderHistory(); renderToday(); toast("Borrado");
+      } catch { toast("No se pudo borrar"); }
+      return;
+    }
+
     const card = e.target.closest(".entry"); if (!card || e.target.closest(".entry-detail")) return;
     const open = card.classList.toggle("open");
     const detail = $(".entry-detail", card);
     if (open) {
       const entry = state.entries.find((x) => x.id === card.dataset.id);
-      detail.innerHTML = renderResult(entry.result, entry.meal);
+      detail.innerHTML = renderResult(entry.result, entry.meal) + 
+        `<div style="margin-top:16px;text-align:right;"><button class="btn btn-ghost danger" data-del="${esc(entry.id)}" type="button">🗑️ Borrar este plato</button></div>`;
     } else detail.innerHTML = "";
   });
 }
 
 /* ---------------- Navegación ---------------- */
 function go(view) {
-  $$(".tab").forEach((t) => t.classList.toggle("is-on", t.dataset.view === view));
-  $$(".view").forEach((v) => v.classList.toggle("is-on", v.id === "view-" + view));
+  $$(".tab").forEach((t) => t.classList.toggle("is-on", t.dataset.view === view));   $$
+(".view").forEach((v) => v.classList.toggle("is-on", v.id === "view-" + view));
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -409,7 +416,7 @@ const openSettingsEl = $("#open-settings");
 if (openSettingsEl) {
   openSettingsEl.addEventListener("click", () => {
     const p = state.profile;
-    $("#s-name").value = p.name || ""; $("#s-age").value = p.age; $("#s-height").value = p.height; $("#s-weight").value = p.weight;
+    $("#s-name").value = p.name \vert{}\vert{} ""; $("#s-age").value = p.age; $("#s-height").value = p.height; $("#s-weight").value = p.weight;
     $("#settings").showModal();
   });
 }
