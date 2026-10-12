@@ -11,6 +11,7 @@ const state = {
   image: null,
   thumb: null,
   meal: autoMeal(),
+  pending: null, // plato analizado, pendiente de guardar
 };
 
 /* ---------------- API ---------------- */
@@ -30,7 +31,7 @@ async function api(path, opts = {}) {
     err.status = 401;
     throw err;
   }
-  if (!res.ok) throw new Error(data.error || "Algo ha fallado");
+  if (!res.ok) throw new Error(data.error || (res.status >= 500 ? "El servidor ha tardado demasiado. Inténtalo otra vez." : "Algo ha fallado"));
   return data;
 }
 
@@ -100,9 +101,11 @@ async function start() {
 function autoMeal() {
   const h = new Date().getHours();
   if (h < 12) return "Desayuno";
-  if (h < 18) return "Almuerzo";
+  if (h < 19) return "Comida";
   return "Cena";
 }
+// Solo existen Desayuno, Comida y Cena (los registros antiguos con "Almuerzo" se muestran como Comida)
+const mealName = (m) => (m === "Almuerzo" || !m ? "Comida" : m);
 const dayKey = (ts) => { const d = new Date(ts); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
 const fmtDay = (ts) => {
   const today = dayKey(Date.now()), y = dayKey(Date.now() - 864e5);
@@ -157,7 +160,7 @@ if (photoInput) {
     const file = e.target.files[0]; if (!file) return;
     try {
       const img = await loadImg(file);
-      const big = toJpeg(img, 1024, 0.8);
+      const big = toJpeg(img, 800, 0.72);
       state.image = big.split(",")[1];
       state.thumb = toJpeg(img, 180, 0.6);
       $("#preview").src = big; $("#preview").hidden = false; $("#drop-empty").hidden = true;
@@ -172,7 +175,7 @@ if (resetBtn) {
 }
 
 function resetScan() {
-  state.image = null; state.thumb = null;
+  state.image = null; state.thumb = null; state.pending = null;
   if ($("#photo")) $("#photo").value = "";
   if ($("#desc")) $("#desc").value = "";
   if ($("#preview")) { $("#preview").hidden = true; $("#preview").src = ""; }
@@ -218,13 +221,11 @@ if (analyzeBtn) {
         $("#result").innerHTML = `<div class="ask">🤔 ${esc(result.clarification || "¿Me cuentas algún ingrediente o cantidad más?")}</div>`;
         $("#desc").focus();
       } else {
-        $("#result").innerHTML = renderResult(result, state.meal);
+        state.pending = { id: crypto.randomUUID(), meal: state.meal, thumb: state.thumb, result };
+        $("#result").innerHTML = renderResult(result, state.meal) +
+          `<div class="save-bar"><button class="btn btn-main" id="save-entry" type="button">💾 Guardar en mi historial</button></div>`;
         $("#result").scrollIntoView({ behavior: "smooth", block: "start" });
         if (result.light === "green") confetti();
-        const entry = { id: crypto.randomUUID(), ts: Date.now(), meal: state.meal, thumb: state.thumb, result };
-        state.entries.unshift(entry);
-        saveEntry(entry);
-        renderToday(); renderHistory();
       }
     } catch (e) {
       $("#result").innerHTML = `<div class="ask">😕 ${esc(e.message)}</div>`;
@@ -240,8 +241,27 @@ async function saveEntry(entry) {
     const d = await api("/api/history", { method: "POST", body: JSON.stringify({ entry }) });
     state.entries = d.entries; setSync(true);
     try { localStorage.setItem(LS.cache, JSON.stringify({ entries: state.entries, profile: state.profile })); } catch {}
-    toast("Guardado en tu historial ✅");
-  } catch { setSync(false); toast("No se pudo guardar. Revisa tu conexión"); }
+    return true;
+  } catch { setSync(false); return false; }
+}
+
+// Botón "Guardar" al final del resultado
+const resultEl = $("#result");
+if (resultEl) {
+  resultEl.addEventListener("click", async (e) => {
+    const btn = e.target.closest("#save-entry"); if (!btn || !state.pending) return;
+    btn.disabled = true; btn.textContent = "Guardando…";
+    const entry = { ...state.pending, ts: Date.now() };
+    if (await saveEntry(entry)) {
+      resetScan();            // limpia foto, texto y resultado para el siguiente plato
+      renderToday(); renderHistory();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      toast("Guardado en Hoy e Historial ✅");
+    } else {
+      btn.disabled = false; btn.textContent = "💾 Guardar en mi historial";
+      toast("No se pudo guardar. Revisa tu conexión");
+    }
+  });
 }
 
 /* ---------------- Render resultado ---------------- */
@@ -263,7 +283,7 @@ function renderResult(r, meal) {
     <div class="res-hero ${light}">
       <div class="light" aria-hidden="true"><i></i><i></i><i></i></div>
       <div>
-        <div class="meal">${esc(r.emoji || "🍽️")} ${esc(meal || "")} · ${esc(r.title)}</div>
+        <div class="meal">${esc(r.emoji || "🍽️")} ${esc(mealName(meal))} · ${esc(r.title)}</div>
         <h2>${esc(r.light_title)}</h2>
         <p>${esc(r.light_reason)}</p>
       </div>
@@ -343,7 +363,7 @@ function renderHistory() {
     const r = e.result || {}, n = r.nutrition || {};
     html += `<article class="entry" data-id="${esc(e.id)}">
       ${e.thumb ? `<img class="thumb" src="${esc(e.thumb)}" alt="">` : `<div class="thumb">${esc(r.emoji || "🍽️")}</div>`}
-      <div><h4>${esc(r.title)}</h4><p>${esc(e.meal || "")} · ${fmtTime(e.ts)} · ${num(n.kcal)} kcal · ${num(n.protein_g)} g prot.</p></div>
+      <div><h4>${esc(r.title)}</h4><p>${esc(mealName(e.meal))} · ${fmtTime(e.ts)} · ${num(n.kcal)} kcal · ${num(n.protein_g)} g prot.</p></div>
       <span class="badge ${esc(r.light || "yellow")}" title="${esc(r.light_title)}"></span>
       <div class="entry-detail"></div>
     </article>`;
@@ -353,22 +373,13 @@ function renderHistory() {
 
 const historyEl = $("#history");
 if (historyEl) {
-  historyEl.addEventListener("click", async (e) => {
-    const del = e.target.closest("[data-del]");
-    if (del) {
-      if (!confirm("¿Borrar este plato del historial?")) return;
-      try {
-        const d = await api("/api/history?id=" + encodeURIComponent(del.dataset.del), { method: "DELETE" });
-        state.entries = d.entries; renderHistory(); renderToday(); toast("Borrado");
-      } catch { toast("No se pudo borrar"); }
-      return;
-    }
+  historyEl.addEventListener("click", (e) => {
     const card = e.target.closest(".entry"); if (!card || e.target.closest(".entry-detail")) return;
     const open = card.classList.toggle("open");
     const detail = $(".entry-detail", card);
     if (open) {
       const entry = state.entries.find((x) => x.id === card.dataset.id);
-      detail.innerHTML = renderResult(entry.result, entry.meal) + `<button class="del" data-del="${esc(entry.id)}" type="button">🗑️ Borrar este plato</button>`;
+      detail.innerHTML = renderResult(entry.result, entry.meal);
     } else detail.innerHTML = "";
   });
 }

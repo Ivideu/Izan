@@ -1,7 +1,7 @@
 import { authOk, json } from "../lib/auth.mjs";
 
 const SYSTEM = `Eres un dietista y nutricionista infantil experto, empático y motivador, especializado en recomposición corporal para adolescentes. Hablas con un chico de 13 años: lenguaje sencillo, cercano, positivo, educador, NUNCA culpabilizador ni restrictivo. No hables de "prohibido" ni de "malo".
-Promueves comida real (proteínas magras, legumbres, verduras, frutas, frutos secos, cereales integrales) e hidratación con agua. El objetivo es perder grasa de forma saludable, mantener/ganar músculo y tener energía sin comprometer el crecimiento: nunca sugieras recortar calorías de forma drástica ni saltarse comidas.
+Solo existen tres comidas al día: desayuno, comida y cena. Nunca hables de almuerzo, merienda, tentempié ni snacks entre horas; en "next_meal" refiérete siempre a la siguiente de esas tres.\nPromueves comida real (proteínas magras, legumbres, verduras, frutas, frutos secos, cereales integrales) e hidratación con agua. El objetivo es perder grasa de forma saludable, mantener/ganar músculo y tener energía sin comprometer el crecimiento: nunca sugieras recortar calorías de forma drástica ni saltarse comidas.
 Analiza la foto (o la descripción) del plato, comida, aperitivo o bebida. Estima porciones y valores de forma aproximada y dilo con naturalidad (son estimaciones).
 Semáforo: "green" = excelente/muy adecuado (equilibrado, denso en nutrientes); "yellow" = adecuado con matices (ajustar porción de algún macronutriente); "red" = ocasional (ultraprocesado o muy calórico, para consumo puntual).
 Si la foto no es clara o falta información importante, pon needs_clarification=true y pregunta con amabilidad por el ingrediente o cantidad concreta.
@@ -43,42 +43,52 @@ export default async (req) => {
   if (image) parts.push({ inline_data: { mime_type: "image/jpeg", data: image } });
   parts.push({ text: context });
 
-  // Modelos a probar, en orden. Se ignora un GEMINI_MODEL de la serie 2.5 (retirada para cuentas nuevas).
+  // Modelos a probar, en orden: primero el más rápido (Netlify gratis corta a ~10 s).
+  // Se ignora un GEMINI_MODEL de la serie 2.5 (retirada para cuentas nuevas).
   const envModel = (Netlify.env.get("GEMINI_MODEL") || "").trim();
   const candidates = [...new Set([
     envModel && !envModel.startsWith("gemini-2.5") ? envModel : "",
-    "gemini-3.8-flash",
     "gemini-3.5-flash-lite",
+    "gemini-3.8-flash",
   ].filter(Boolean))];
 
-  const buildBody = (model) => JSON.stringify({
-    system_instruction: { parts: [{ text: SYSTEM }] },
-    contents: [{ role: "user", parts }],
-    generationConfig: {
-      responseMimeType: "application/json",
-      maxOutputTokens: 4096,
-      temperature: 0.4,
-      thinkingConfig: model.startsWith("gemini-2.5") ? { thinkingBudget: 0 } : { thinkingLevel: "low" },
-    },
-  });
+  const buildBody = (model) => {
+    const generationConfig = { responseMimeType: "application/json", maxOutputTokens: 2048 };
+    // Flash-Lite ya piensa lo mínimo por defecto y no admite temperature personalizada.
+    if (!/flash-lite/.test(model)) generationConfig.thinkingConfig = { thinkingLevel: "low" };
+    return JSON.stringify({
+      system_instruction: { parts: [{ text: SYSTEM }] },
+      contents: [{ role: "user", parts }],
+      generationConfig,
+    });
+  };
 
+  const deadline = Date.now() + 8500; // devolvemos un error limpio antes de que Netlify corte
   let res, model, detail = "";
-  for (model of candidates) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
-    for (let attempt = 0; attempt < 2; attempt++) {
-      res = await fetch(url, {
-        method: "POST",
-        headers: { "x-goog-api-key": apiKey, "content-type": "application/json" },
-        body: buildBody(model),
-      });
-      if (res.ok || ![429, 500, 503].includes(res.status)) break;
-      await new Promise((r) => setTimeout(r, 1200));
+  try {
+    for (model of candidates) {
+      const left = deadline - Date.now();
+      if (left < 1500) break;
+      res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+        {
+          method: "POST",
+          headers: { "x-goog-api-key": apiKey, "content-type": "application/json" },
+          body: buildBody(model),
+          signal: AbortSignal.timeout(left),
+        }
+      );
+      if (res.ok) break;
+      detail = await res.text();
+      console.error("Gemini error", model, res.status, detail);
+      if (![404, 503].includes(res.status)) break; // se prueba el siguiente solo si no existe o está saturado
     }
-    if (res.ok) break;
-    detail = await res.text();
-    console.error("Gemini error", model, res.status, detail);
-    if (res.status !== 404) break; // solo se prueba el siguiente modelo si este no existe
+  } catch (e) {
+    console.error("Gemini timeout/red", model, e?.name, e?.message);
+    return json({ error: "El análisis ha tardado demasiado. Prueba otra vez (con una foto más sencilla si insiste)." }, 504);
   }
+
+  if (!res) return json({ error: "El análisis ha tardado demasiado. Prueba otra vez." }, 504);
 
   if (!res.ok) {
     let googleMsg = "";
