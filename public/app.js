@@ -153,8 +153,7 @@ function toJpeg(img, max, q) {
   return c.toDataURL("image/jpeg", q);
 }
 
-const photoInput = $("#photo");
-if (photoInput) {
+for (const photoInput of $$("#photo, #photo-cam")) {
   photoInput.style.display = "none";
   photoInput.addEventListener("change", async (e) => {
     const file = e.target.files[0]; if (!file) return;
@@ -177,6 +176,7 @@ if (resetBtn) {
 function resetScan() {
   state.image = null; state.thumb = null; state.pending = null;
   if ($("#photo")) $("#photo").value = "";
+  if ($("#photo-cam")) $("#photo-cam").value = "";
   if ($("#desc")) $("#desc").value = "";
   if ($("#preview")) { $("#preview").hidden = true; $("#preview").src = ""; }
   if ($("#drop-empty")) $("#drop-empty").hidden = false;
