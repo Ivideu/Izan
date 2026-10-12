@@ -34,7 +34,10 @@ export default async (req) => {
   }
 
   if (req.method === "DELETE") {
-    return json({ error: "Los platos guardados no se pueden borrar" }, 403);
+    const id = new URL(req.url).searchParams.get("id");
+    const next = entries.filter((e) => e.id !== id);
+    await store.setJSON("entries", next);
+    return json({ ok: true, entries: next });
   }
 
   return json({ error: "Método no permitido" }, 405);
@@ -46,3 +49,4 @@ function clamp(v, min, max, fallback) {
 }
 
 export const config = { path: "/api/history" };
+```[cite: 6]
