@@ -4,7 +4,7 @@ const $ = (s, r = document) => r.querySelector(s); const $$ = (s, r = document) 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const num = (n) => Math.round(Number(n) || 0);
 
-const LS = { cache: "pp_cache" };
+const LS = { cache: "pp_cache", pin: "pp_pin" };
 const state = {
   entries: [],
   profile: { name: "", age: 13, height: 160, weight: 69 },
@@ -14,14 +14,53 @@ const state = {
 };
 
 /* ---------------- API ---------------- */
+const getPin = () => { try { return localStorage.getItem(LS.pin) || ""; } catch { return ""; } };
+const setPin = (v) => { try { v ? localStorage.setItem(LS.pin, v) : localStorage.removeItem(LS.pin); } catch {} };
+
 async function api(path, opts = {}) {
   const res = await fetch(path, {
     ...opts,
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", "x-family-pin": getPin() },
   });
   const data = await res.json().catch(() => ({}));
+  if (res.status === 401) {
+    setPin("");
+    showGate();
+    const err = new Error(data.error || "PIN incorrecto");
+    err.status = 401;
+    throw err;
+  }
   if (!res.ok) throw new Error(data.error || "Algo ha fallado");
   return data;
+}
+
+/* ---------------- PIN (solo la primera vez) ---------------- */
+function showGate(msg = "") {
+  const app = $("#app"); if (app) app.hidden = true;
+  const g = $("#gate"); if (g) g.hidden = false;
+  const err = $("#gate-error"); if (err) err.textContent = msg;
+  const inp = $("#gate-pin"); if (inp) { inp.value = ""; inp.focus(); }
+}
+
+const gateForm = $("#gate-form");
+if (gateForm) {
+  gateForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const pin = $("#gate-pin").value.trim(); if (!pin) return;
+    setPin(pin);
+    $("#gate-error").textContent = "";
+    try {
+      const d = await api("/api/history");
+      state.entries = d.entries; state.profile = d.profile;
+      try { localStorage.setItem(LS.cache, JSON.stringify(d)); } catch {}
+      setSync(true);
+      $("#gate").hidden = true; $("#app").hidden = false;
+      renderAll();
+    } catch (err) {
+      if (err.status === 401) showGate("PIN incorrecto");
+      else { $("#gate-error").textContent = "No hay conexión. Inténtalo de nuevo."; setPin(""); }
+    }
+  });
 }
 
 function setSync(ok) {
@@ -38,6 +77,7 @@ async function loadAll() {
     try { localStorage.setItem(LS.cache, JSON.stringify(d)); } catch {}
     setSync(true);
   } catch (e) {
+    if (e.status === 401) return false;
     try {
       const c = JSON.parse(localStorage.getItem(LS.cache) || "null");
       if (c) { state.entries = c.entries; state.profile = c.profile; }
@@ -48,9 +88,11 @@ async function loadAll() {
 }
 
 async function start() {
-  await loadAll();
-  const app = $("#app");
-  if (app) app.hidden = false;
+  if (!getPin()) { showGate(); return; }
+  const ok = await loadAll();
+  if (!ok) return; // PIN rechazado: ya se muestra la pantalla de acceso
+  $("#gate").hidden = true;
+  const app = $("#app"); if (app) app.hidden = false;
   renderAll();
 }
 
@@ -375,7 +417,7 @@ if (settingsFormEl) {
 
 /* ---------------- Sincronización al volver a la app ---------------- */
 document.addEventListener("visibilitychange", async () => {
-  if (document.visibilityState === "visible" && !$("#app").hidden) {
+  if (document.visibilityState === "visible" && !$("#app").hidden && getPin()) {
     if (await loadAll()) { renderToday(); renderHistory(); }
   }
 });
