@@ -1,12 +1,10 @@
 import { getStore } from "@netlify/blobs";
-import { authOk, json } from "../lib/auth.mjs";
+import { json } from "../lib/auth.mjs";
 
 const MAX_ENTRIES = 400;
 const DEFAULT_PROFILE = { name: "", age: 13, height: 160, weight: 69 };
 
 export default async (req) => {
-  if (!authOk(req)) return json({ error: "PIN incorrecto" }, 401);
-
   const store = getStore("platopower");
   const entries = (await store.get("entries", { type: "json" })) || [];
   const profile = (await store.get("profile", { type: "json" })) || DEFAULT_PROFILE;
