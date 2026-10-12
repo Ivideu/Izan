@@ -8,8 +8,8 @@ const LS = { cache: "pp_cache" };
 const state = {
   entries: [],
   profile: { name: "", age: 13, height: 160, weight: 69 },
-  image: null,   
-  thumb: null,   
+  image: null,
+  thumb: null,
   meal: autoMeal(),
 };
 
@@ -108,67 +108,85 @@ function toJpeg(img, max, q) {
   return c.toDataURL("image/jpeg", q);
 }
 
-$("#photo").addEventListener("change", async (e) => {
-  const file = e.target.files[0]; if (!file) return;
-  try {
-    const img = await loadImg(file);
-    const big = toJpeg(img, 1024, 0.8);
-    state.image = big.split(",")[1];
-    state.thumb = toJpeg(img, 180, 0.6);
-    $("#preview").src = big; $("#preview").hidden = false; $("#drop-empty").hidden = true;
-    $("#reset").hidden = false;
-  } catch { toast("No he podido abrir esa foto"); }
-});
+const photoInput = $("#photo");
+if (photoInput) {
+  photoInput.style.display = "none";
+  photoInput.addEventListener("change", async (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    try {
+      const img = await loadImg(file);
+      const big = toJpeg(img, 1024, 0.8);
+      state.image = big.split(",")[1];
+      state.thumb = toJpeg(img, 180, 0.6);
+      $("#preview").src = big; $("#preview").hidden = false; $("#drop-empty").hidden = true;
+      $("#reset").hidden = false;
+    } catch { toast("No he podido abrir esa foto"); }
+  });
+}
 
-$("#reset").addEventListener("click", resetScan);
+const resetBtn = $("#reset");
+if (resetBtn) {
+  resetBtn.addEventListener("click", resetScan);
+}
+
 function resetScan() {
   state.image = null; state.thumb = null;
-  $("#photo").value = ""; $("#desc").value = "";
-  $("#preview").hidden = true; $("#drop-empty").hidden = false;
-  $("#reset").hidden = true; $("#result").innerHTML = ""; }  /* ---------------- Chips ---------------- */ function renderChips() {   $$("#meal-chips .chip").forEach((c) => c.classList.toggle("is-on", c.dataset.meal === state.meal));
+  if ($("#photo")) $("#photo").value = "";
+  if ($("#desc")) $("#desc").value = "";
+  if ($("#preview")) { $("#preview").hidden = true; $("#preview").src = ""; }
+  if ($("#drop-empty")) $("#drop-empty").hidden = false;
+  if ($("#reset")) $("#reset").hidden = true;
+  if ($("#result")) $("#result").innerHTML = ""; }  /* ---------------- Chips ---------------- */ function renderChips() {   $$("#meal-chips .chip").forEach((c) => c.classList.toggle("is-on", c.dataset.meal === state.meal));
 }
-$("#meal-chips").addEventListener("click", (e) => {
-  const c = e.target.closest(".chip"); if (!c) return;
-  state.meal = c.dataset.meal; renderChips();
-});
+
+const mealChips = $("#meal-chips");
+if (mealChips) {
+  mealChips.addEventListener("click", (e) => {
+    const c = e.target.closest(".chip"); if (!c) return;
+    state.meal = c.dataset.meal; renderChips();
+  });
+}
 
 /* ---------------- Analizar ---------------- */
 const LOADING = ["Mirando tu plato…", "Contando proteínas 💪", "Buscando verduritas 🥦", "Calculando la energía ⚡", "Preparando tus consejos ✨"];
 
-$("#analyze").addEventListener("click", async () => {
-  const text = $("#desc").value.trim();
-  if (!state.image && !text) { toast("Haz una foto o cuéntame qué comes 📸"); return; }
+const analyzeBtn = $("#analyze");
+if (analyzeBtn) {
+  analyzeBtn.addEventListener("click", async () => {
+    const text = $("#desc").value.trim();
+    if (!state.image && !text) { toast("Haz una foto o cuéntame qué comes 📸"); return; }
 
-  const btn = $("#analyze"); btn.disabled = true;
-  $("#result").innerHTML = ""; $("#loading").hidden = false;
-  $("#drop").classList.add("scanning");
-  let i = 0; const timer = setInterval(() => { $("#loading-text").textContent = LOADING[++i % LOADING.length]; }, 1700);
+    analyzeBtn.disabled = true;
+    $("#result").innerHTML = ""; $("#loading").hidden = false;
+    $("#drop").classList.add("scanning");
+    let i = 0; const timer = setInterval(() => { $("#loading-text").textContent = LOADING[++i % LOADING.length]; }, 1700);
 
-  try {
-    const { result } = await api("/api/analyze", {
-      method: "POST",
-      body: JSON.stringify({ image: state.image, text, profile: state.profile, meal: state.meal }),
-    });
+    try {
+      const { result } = await api("/api/analyze", {
+        method: "POST",
+        body: JSON.stringify({ image: state.image, text, profile: state.profile, meal: state.meal }),
+      });
 
-    if (result.needs_clarification) {
-      $("#result").innerHTML = `<div class="ask">🤔 ${esc(result.clarification || "¿Me cuentas algún ingrediente o cantidad más?")}</div>`;
-      $("#desc").focus();
-    } else {
-      $("#result").innerHTML = renderResult(result, state.meal);
-      $("#result").scrollIntoView({ behavior: "smooth", block: "start" });
-      if (result.light === "green") confetti();
-      const entry = { id: crypto.randomUUID(), ts: Date.now(), meal: state.meal, thumb: state.thumb, result };
-      state.entries.unshift(entry);
-      saveEntry(entry);
-      renderToday(); renderHistory();
+      if (result.needs_clarification) {
+        $("#result").innerHTML = `<div class="ask">🤔 ${esc(result.clarification || "¿Me cuentas algún ingrediente o cantidad más?")}</div>`;
+        $("#desc").focus();
+      } else {
+        $("#result").innerHTML = renderResult(result, state.meal);
+        $("#result").scrollIntoView({ behavior: "smooth", block: "start" });
+        if (result.light === "green") confetti();
+        const entry = { id: crypto.randomUUID(), ts: Date.now(), meal: state.meal, thumb: state.thumb, result };
+        state.entries.unshift(entry);
+        saveEntry(entry);
+        renderToday(); renderHistory();
+      }
+    } catch (e) {
+      $("#result").innerHTML = `<div class="ask">😕 ${esc(e.message)}</div>`;
+    } finally {
+      clearInterval(timer); analyzeBtn.disabled = false;
+      $("#loading").hidden = true; $("#drop").classList.remove("scanning");
     }
-  } catch (e) {
-    $("#result").innerHTML = `<div class="ask">😕 ${esc(e.message)}</div>`;
-  } finally {
-    clearInterval(timer); btn.disabled = false;
-    $("#loading").hidden = true; $("#drop").classList.remove("scanning");
-  }
-});
+  });
+}
 
 async function saveEntry(entry) {
   try {
@@ -259,7 +277,7 @@ function renderToday() {
       <div class="stat m"><b>${sum("fiber_g")} g</b><span>fibra 🌱</span></div>
     </div>
     <div class="card"><h3>🟢 Platos excelentes esta semana: ${greens}</h3><div class="week">${week}</div></div>
-    ${list.length ? "" : `<div class="empty"><div class="big">🍽️</div><strong>Tu día está en blanco</strong><button class="btn btn-main" data-go="scan">Analizar un plato</button></div>`}
+    ${list.length ? "" : `<div class="empty"><div class="big">🍽️</div><strong>Tu día está en blanco</strong><button class="btn btn-main" data-go="scan" type="button">Analizar un plato</button></div>`}
   </div>`;
 }
 
@@ -268,7 +286,7 @@ function renderHistory() {
   const container = $("#history");
   if (!container) return;
   if (!state.entries.length) {
-    container.innerHTML = `<div class="empty"><div class="big">🗓️</div><strong>Aquí aparecerán tus platos</strong><button class="btn btn-main" data-go="scan">Analizar el primero</button></div>`;
+    container.innerHTML = `<div class="empty"><div class="big">🗓️</div><strong>Aquí aparecerán tus platos</strong><button class="btn btn-main" data-go="scan" type="button">Analizar el primero</button></div>`;
     return;
   }
   let html = "", last = "";
@@ -303,7 +321,7 @@ if (historyEl) {
     const detail = $(".entry-detail", card);
     if (open) {
       const entry = state.entries.find((x) => x.id === card.dataset.id);
-      detail.innerHTML = renderResult(entry.result, entry.meal) + `<button class="del" data-del="${esc(entry.id)}">🗑️ Borrar este plato</button>`;
+      detail.innerHTML = renderResult(entry.result, entry.meal) + `<button class="del" data-del="${esc(entry.id)}" type="button">🗑️ Borrar este plato</button>`;
     } else detail.innerHTML = "";
   });
 }

@@ -32,13 +32,13 @@
   <header class="top">
     <div class="brand"><span class="brand-dot">🥗</span><span id="hello">PlatoPower</span></div>
     <nav class="tabs" id="tabs" aria-label="Secciones">
-      <button class="tab is-on" data-view="scan"><span>📸</span>Analizar</button>
-      <button class="tab" data-view="today"><span>⚡</span>Hoy</button>
-      <button class="tab" data-view="history"><span>🗓️</span>Historial</button>
+      <button class="tab is-on" data-view="scan" type="button"><span>📸</span>Analizar</button>
+      <button class="tab" data-view="today" type="button"><span>⚡</span>Hoy</button>
+      <button class="tab" data-view="history" type="button"><span>🗓️</span>Historial</button>
     </nav>
     <div class="top-right">
       <span class="sync" id="sync" title="Estado de sincronización">● sincronizado</span>
-      <button class="icon-btn" id="open-settings" aria-label="Ajustes">⚙️</button>
+      <button class="icon-btn" id="open-settings" aria-label="Ajustes" type="button">⚙️</button>
     </div>
   </header>
 
@@ -60,19 +60,19 @@
           </div>
           <span class="scan-line" aria-hidden="true"></span>
         </label>
-        <input id="photo" type="file" accept="image/*" hidden>
+        <input id="photo" type="file" accept="image/*">
 
         <div class="chips" id="meal-chips" role="radiogroup" aria-label="Momento del día">
-          <button class="chip" data-meal="Desayuno">🥣 Desayuno</button>
-          <button class="chip" data-meal="Almuerzo">🍝 Comida</button>
-          <button class="chip" data-meal="Cena">🍽️ Cena</button>
+          <button class="chip" data-meal="Desayuno" type="button">🥣 Desayuno</button>
+          <button class="chip" data-meal="Almuerzo" type="button">🍝 Comida</button>
+          <button class="chip" data-meal="Cena" type="button">🍽️ Cena</button>
         </div>
 
         <textarea id="desc" rows="2" maxlength="600" placeholder="Opcional: cuéntame ingredientes o cantidades (ej. 2 huevos, 1 tostada integral…)"></textarea>
 
         <div class="actions">
-          <button class="btn btn-main" id="analyze">✨ Analizar mi plato</button>
-          <button class="btn btn-ghost" id="reset" hidden>Limpiar</button>
+          <button class="btn btn-main" id="analyze" type="button">✨ Analizar mi plato</button>
+          <button class="btn btn-ghost" id="reset" type="button" hidden>Limpiar</button>
         </div>
       </div>
 
@@ -112,8 +112,8 @@
     </div>
     <p class="muted small">PlatoPower da estimaciones orientativas. Para cualquier decisión sobre tu alimentación habla con tu pediatra o dietista.</p>
     <div class="actions">
-      <button class="btn btn-main" value="save" id="s-save">Guardar</button>
-      <button class="btn btn-ghost" value="cancel">Cerrar</button>
+      <button class="btn btn-main" value="save" id="s-save" type="submit">Guardar</button>
+      <button class="btn btn-ghost" value="cancel" type="submit">Cerrar</button>
     </div>
   </form>
 </dialog>
