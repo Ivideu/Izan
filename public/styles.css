@@ -40,7 +40,7 @@ button{cursor:pointer;border:0;background:none}
 .gate-error{color:var(--coral);min-height:1.2em;font-weight:600;font-size:14px}
 
 /* ---------- layout ---------- */
-.app{max-width:980px;margin:0 auto;padding:0 16px 120px}
+.app{max-width:980px;margin:0 auto;padding:0 16px 40px}
 .top{
   position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;justify-content:space-between;
   padding:calc(10px + env(safe-area-inset-top)) 0 10px;
@@ -62,11 +62,7 @@ button{cursor:pointer;border:0;background:none}
 @media (max-width:720px){
   .brand span:last-child{display:none}
   .sync{display:none}
-  .tabs{
-    position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom));
-    z-index:30;background:rgba(255,255,255,.92);backdrop-filter:blur(14px);box-shadow:var(--shadow);
-  }
-  .tab{padding:11px 16px}
+  .tab{padding:9px 12px;font-size:13px}
   .top{justify-content:space-between}
 }
 
