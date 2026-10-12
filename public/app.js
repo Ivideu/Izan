@@ -55,9 +55,8 @@ async function start() {
 /* ---------------- Utilidades ---------------- */
 function autoMeal() {
   const h = new Date().getHours();
-  if (h < 11) return "Desayuno";
-  if (h < 16) return "Almuerzo";
-  if (h < 19) return "Merienda";
+  if (h < 12) return "Desayuno";
+  if (h < 18) return "Almuerzo";
   return "Cena";
 }
 const dayKey = (ts) => { const d = new Date(ts); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
