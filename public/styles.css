@@ -93,6 +93,9 @@ button{cursor:pointer;border:0;background:none}
 .drop.scanning .scan-line{opacity:1;animation:scan 1.5s ease-in-out infinite alternate}
 @keyframes scan{from{top:0}to{top:calc(100% - 4px)}}
 
+.cam{width:min(560px,96vw);padding:14px;display:grid;gap:12px}
+.cam video{width:100%;max-height:70dvh;border-radius:var(--r-md);background:#000;object-fit:cover}
+.pick-gallery{display:block;text-align:center;font-size:15px;cursor:pointer}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{padding:9px 14px;border-radius:999px;background:var(--mist);border:2px solid transparent;font-weight:700;font-size:14px;transition:.2s}
 .chip:hover{transform:translateY(-1px)}
@@ -168,6 +171,8 @@ textarea:focus{outline:none;border-color:var(--violet-2)}
 .fact{font-size:14px;color:var(--soft)}
 .note{padding:12px 14px;border-radius:var(--r-sm);background:#fff8e8;border:1px solid #ffe2a8;font-size:14px}
 .ask{padding:20px;border-radius:var(--r-md);background:#fff8e8;border:1px solid #ffe2a8;margin-top:20px;font-weight:600}
+.save-bar{display:grid;margin-top:4px}
+.save-bar .btn{width:100%;font-size:18px;padding:16px 22px}
 .disclaimer{font-size:12px;color:var(--soft);text-align:center}
 
 /* ---------- today ---------- */
@@ -198,7 +203,11 @@ textarea:focus{outline:none;border-color:var(--violet-2)}
 .entry-detail{grid-column:1/-1;display:none}
 .entry.open{grid-template-columns:72px 1fr auto}
 .entry.open .entry-detail{display:block;cursor:default}
-.del{font-size:13px;color:var(--coral);font-weight:700;margin-top:10px}
+.manage{margin-top:20px}
+.manage .chips{margin-bottom:14px}
+.btn-danger{color:#fff;background:linear-gradient(135deg,var(--coral),#ff8a6b);box-shadow:0 12px 24px -10px var(--coral)}
+.del{padding:10px 16px;border-radius:14px;background:#fff1f3;color:var(--coral);font-weight:800;font-size:14px;transition:transform .15s}
+.del:active{transform:scale(.97)}
 
 /* ---------- modal / toast ---------- */
 .modal{border:0;border-radius:var(--r-lg);padding:24px;width:min(460px,92vw);box-shadow:0 30px 80px -20px rgba(30,30,90,.45)}

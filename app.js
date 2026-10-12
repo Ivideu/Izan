@@ -157,16 +157,59 @@ for (const photoInput of $$("#photo, #photo-cam")) {
   photoInput.style.display = "none";
   photoInput.addEventListener("change", async (e) => {
     const file = e.target.files[0]; if (!file) return;
-    try {
-      const img = await loadImg(file);
-      const big = toJpeg(img, 800, 0.72);
-      state.image = big.split(",")[1];
-      state.thumb = toJpeg(img, 180, 0.6);
-      $("#preview").src = big; $("#preview").hidden = false; $("#drop-empty").hidden = true;
-      $("#reset").hidden = false;
-    } catch { toast("No he podido abrir esa foto"); }
+    try { setPhoto(await loadImg(file)); }
+    catch { toast("No he podido abrir esa foto"); }
   });
 }
+
+function setPhoto(img) {
+  const big = toJpeg(img, 800, 0.72);
+  state.image = big.split(",")[1];
+  state.thumb = toJpeg(img, 180, 0.6);
+  $("#preview").src = big; $("#preview").hidden = false; $("#drop-empty").hidden = true;
+  $("#reset").hidden = false;
+}
+
+/* ---- Cámara en vivo (no depende del selector del sistema) ---- */
+let camStream = null;
+function stopCam() {
+  if (camStream) { camStream.getTracks().forEach((t) => t.stop()); camStream = null; }
+  const v = $("#cam-video"); if (v) v.srcObject = null;
+}
+
+const dropEl = $("#drop");
+if (dropEl) {
+  dropEl.addEventListener("click", async (e) => {
+    if (!navigator.mediaDevices?.getUserMedia) return; // sin soporte: se abre el selector normal
+    e.preventDefault();
+    try {
+      camStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 } }, audio: false,
+      });
+      const v = $("#cam-video"); v.srcObject = camStream;
+      $("#cam").showModal(); v.play().catch(() => {});
+    } catch (err) {
+      stopCam();
+      if (err.name === "NotAllowedError") toast("Permite el acceso a la cámara en los ajustes del navegador 📷");
+      else $("#photo-cam").click(); // plan B: selector del sistema
+    }
+  });
+}
+
+const camShot = $("#cam-shot");
+if (camShot) {
+  camShot.addEventListener("click", () => {
+    const v = $("#cam-video");
+    if (!v.videoWidth) { toast("La cámara aún se está iniciando…"); return; }
+    const c = document.createElement("canvas");
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext("2d").drawImage(v, 0, 0);
+    setPhoto(c);
+    $("#cam").close();
+  });
+}
+const camDlg = $("#cam");
+if (camDlg) camDlg.addEventListener("close", stopCam);
 
 const resetBtn = $("#reset");
 if (resetBtn) {

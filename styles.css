@@ -93,6 +93,8 @@ button{cursor:pointer;border:0;background:none}
 .drop.scanning .scan-line{opacity:1;animation:scan 1.5s ease-in-out infinite alternate}
 @keyframes scan{from{top:0}to{top:calc(100% - 4px)}}
 
+.cam{width:min(560px,96vw);padding:14px;display:grid;gap:12px}
+.cam video{width:100%;max-height:70dvh;border-radius:var(--r-md);background:#000;object-fit:cover}
 .pick-gallery{display:block;text-align:center;font-size:15px;cursor:pointer}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{padding:9px 14px;border-radius:999px;background:var(--mist);border:2px solid transparent;font-weight:700;font-size:14px;transition:.2s}

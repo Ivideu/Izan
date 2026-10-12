@@ -131,6 +131,14 @@
   </form>
 </dialog>
 
+<dialog id="cam" class="modal cam">
+  <video id="cam-video" autoplay playsinline muted></video>
+  <div class="actions">
+    <button class="btn btn-main" id="cam-shot" type="button">📸 Hacer foto</button>
+    <button class="btn btn-ghost" id="cam-close" type="button" onclick="document.getElementById('cam').close()">Cerrar</button>
+  </div>
+</dialog>
+
 <dialog id="confirm-del" class="modal">
   <form method="dialog">
     <h3>¿Eliminar este plato?</h3>

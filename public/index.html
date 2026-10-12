@@ -62,16 +62,18 @@
           <p>Haz una foto o cuéntamelo. Te digo cómo va tu plato en segundos.</p>
         </div>
 
-        <label class="drop" id="drop" for="photo">
+        <label class="drop" id="drop" for="photo-cam">
           <img id="preview" alt="Vista previa del plato" hidden>
           <div class="drop-empty" id="drop-empty">
             <div class="drop-icon">📷</div>
-            <strong>Toca para hacer o elegir una foto</strong>
+            <strong>Toca para hacer una foto</strong>
             <span>Plato, bebida… todo vale</span>
           </div>
           <span class="scan-line" aria-hidden="true"></span>
         </label>
+        <input id="photo-cam" type="file" accept="image/*" capture="environment">
         <input id="photo" type="file" accept="image/*">
+        <label class="btn btn-ghost pick-gallery" for="photo">🖼️ Elegir de la galería</label>
 
         <div class="chips" id="meal-chips" role="radiogroup" aria-label="Momento del día">
           <button class="chip" data-meal="Desayuno" type="button">🥣 Desayuno</button>
@@ -127,6 +129,14 @@
       <button class="btn btn-ghost" value="cancel" type="submit">Cerrar</button>
     </div>
   </form>
+</dialog>
+
+<dialog id="cam" class="modal cam">
+  <video id="cam-video" autoplay playsinline muted></video>
+  <div class="actions">
+    <button class="btn btn-main" id="cam-shot" type="button">📸 Hacer foto</button>
+    <button class="btn btn-ghost" id="cam-close" type="button" onclick="document.getElementById('cam').close()">Cerrar</button>
+  </div>
 </dialog>
 
 <dialog id="confirm-del" class="modal">
