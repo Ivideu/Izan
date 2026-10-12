@@ -8,8 +8,8 @@ const LS = { cache: "pp_cache" };
 const state = {
   entries: [],
   profile: { name: "", age: 13, height: 160, weight: 69 },
-  image: null,   // base64 jpeg (sin prefijo) para analizar
-  thumb: null,   // miniatura para el historial
+  image: null,   
+  thumb: null,   
   meal: autoMeal(),
 };
 
@@ -26,6 +26,7 @@ async function api(path, opts = {}) {
 
 function setSync(ok) {
   const el = $("#sync");
+  if (!el) return;
   el.textContent = ok ? "● sincronizado" : "● sin conexión";
   el.classList.toggle("off", !ok);
 }
@@ -48,7 +49,8 @@ async function loadAll() {
 
 async function start() {
   await loadAll();
-  $("#app").hidden = false;
+  const app = $("#app");
+  if (app) app.hidden = false;
   renderAll();
 }
 
@@ -70,13 +72,15 @@ const fmtDay = (ts) => {
 const fmtTime = (ts) => new Date(ts).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
 
 function toast(msg) {
-  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  const t = $("#toast"); if (!t) return;
+  t.textContent = msg; t.classList.add("show");
   clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 2600);
 }
 
 function confetti() {
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  const box = $("#confetti"); const colors = ["#6c5ce7", "#14c38e", "#ffb020", "#35b6ff", "#ff5d73"];
+  const box = $("#confetti"); if (!box) return;
+  const colors = ["#6c5ce7", "#14c38e", "#ffb020", "#35b6ff", "#ff5d73"];
   for (let i = 0; i < 46; i++) {
     const p = document.createElement("i");
     p.style.left = Math.random() * 100 + "vw";
@@ -95,6 +99,7 @@ function loadImg(file) {
     img.src = URL.createObjectURL(file);
   });
 }
+
 function toJpeg(img, max, q) {
   const k = Math.min(1, max / Math.max(img.width, img.height));
   const c = document.createElement("canvas");
@@ -242,7 +247,9 @@ function renderToday() {
   }).join("");
 
   const name = state.profile.name ? `, ${esc(state.profile.name)}` : "";
-  $("#today").innerHTML = `<div class="stack">
+  const container = $("#today");
+  if (!container) return;
+  container.innerHTML = `<div class="stack">
     <div><h2 style="font-size:clamp(26px,5vw,36px);font-weight:800">¡Hola${name}! 👋</h2>
     <p class="muted" style="margin-top:6px">${list.length ? "Así va tu día." : "Aún no has apuntado nada hoy. ¡Haz una foto de tu próxima comida!"}</p></div>
     <div class="stats">
@@ -258,8 +265,10 @@ function renderToday() {
 
 /* ---------------- Historial ---------------- */
 function renderHistory() {
+  const container = $("#history");
+  if (!container) return;
   if (!state.entries.length) {
-    $("#history").innerHTML = `<div class="empty"><div class="big">🗓️</div><strong>Aquí aparecerán tus platos</strong><button class="btn btn-main" data-go="scan">Analizar el primero</button></div>`;
+    container.innerHTML = `<div class="empty"><div class="big">🗓️</div><strong>Aquí aparecerán tus platos</strong><button class="btn btn-main" data-go="scan">Analizar el primero</button></div>`;
     return;
   }
   let html = "", last = "";
@@ -274,27 +283,30 @@ function renderHistory() {
       <div class="entry-detail"></div>
     </article>`;
   }
-  $("#history").innerHTML = html;
+  container.innerHTML = html;
 }
 
-$("#history").addEventListener("click", async (e) => {
-  const del = e.target.closest("[data-del]");
-  if (del) {
-    if (!confirm("¿Borrar este plato del historial?")) return;
-    try {
-      const d = await api("/api/history?id=" + encodeURIComponent(del.dataset.del), { method: "DELETE" });
-      state.entries = d.entries; renderHistory(); renderToday(); toast("Borrado");
-    } catch { toast("No se pudo borrar"); }
-    return;
-  }
-  const card = e.target.closest(".entry"); if (!card || e.target.closest(".entry-detail")) return;
-  const open = card.classList.toggle("open");
-  const detail = $(".entry-detail", card);
-  if (open) {
-    const entry = state.entries.find((x) => x.id === card.dataset.id);
-    detail.innerHTML = renderResult(entry.result, entry.meal) + `<button class="del" data-del="${esc(entry.id)}">🗑️ Borrar este plato</button>`;
-  } else detail.innerHTML = "";
-});
+const historyEl = $("#history");
+if (historyEl) {
+  historyEl.addEventListener("click", async (e) => {
+    const del = e.target.closest("[data-del]");
+    if (del) {
+      if (!confirm("¿Borrar este plato del historial?")) return;
+      try {
+        const d = await api("/api/history?id=" + encodeURIComponent(del.dataset.del), { method: "DELETE" });
+        state.entries = d.entries; renderHistory(); renderToday(); toast("Borrado");
+      } catch { toast("No se pudo borrar"); }
+      return;
+    }
+    const card = e.target.closest(".entry"); if (!card || e.target.closest(".entry-detail")) return;
+    const open = card.classList.toggle("open");
+    const detail = $(".entry-detail", card);
+    if (open) {
+      const entry = state.entries.find((x) => x.id === card.dataset.id);
+      detail.innerHTML = renderResult(entry.result, entry.meal) + `<button class="del" data-del="${esc(entry.id)}">🗑️ Borrar este plato</button>`;
+    } else detail.innerHTML = "";
+  });
+}
 
 /* ---------------- Navegación ---------------- */
 function go(view) {
@@ -302,23 +314,41 @@ function go(view) {
 (".view").forEach((v) => v.classList.toggle("is-on", v.id === "view-" + view));
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
-$("#tabs").addEventListener("click", (e) => { const t = e.target.closest(".tab"); if (t) go(t.dataset.view); });
-document.addEventListener("click", (e) => { const g = e.target.closest("[data-go]"); if (g) go(g.dataset.go); });
+
+const tabsEl = $("#tabs");
+if (tabsEl) {
+  tabsEl.addEventListener("click", (e) => { 
+    const t = e.target.closest(".tab"); 
+    if (t) go(t.dataset.view); 
+  });
+}
+
+document.addEventListener("click", (e) => { 
+  const g = e.target.closest("[data-go]"); 
+  if (g) go(g.dataset.go); 
+});
 
 /* ---------------- Ajustes ---------------- */
-$("#open-settings").addEventListener("click", () => {
-  const p = state.profile;
-  $("#s-name").value = p.name \vert{}\vert{} ""; $("#s-age").value = p.age; $("#s-height").value = p.height; $("#s-weight").value = p.weight;
-  $("#settings").showModal();
-});
-$("#settings-form").addEventListener("submit", async (e) => {
-  if (e.submitter?.value !== "save") return;
-  const profile = { name: $("#s-name").value.trim(), age: +$("#s-age").value, height: +$("#s-height").value, weight: +$("#s-weight").value };
-  try {
-    const d = await api("/api/history", { method: "PUT", body: JSON.stringify({ profile }) });
-    state.profile = d.profile; renderToday(); toast("Ajustes guardados ✅");
-  } catch { toast("No se pudieron guardar"); }
-});
+const openSettingsEl = $("#open-settings");
+if (openSettingsEl) {
+  openSettingsEl.addEventListener("click", () => {
+    const p = state.profile;
+    $("#s-name").value = p.name \vert{}\vert{} ""; $("#s-age").value = p.age; $("#s-height").value = p.height; $("#s-weight").value = p.weight;
+    $("#settings").showModal();
+  });
+}
+
+const settingsFormEl = $("#settings-form");
+if (settingsFormEl) {
+  settingsFormEl.addEventListener("submit", async (e) => {
+    if (e.submitter?.value !== "save") return;
+    const profile = { name: $("#s-name").value.trim(), age: +$("#s-age").value, height: +$("#s-height").value, weight: +$("#s-weight").value };
+    try {
+      const d = await api("/api/history", { method: "PUT", body: JSON.stringify({ profile }) });
+      state.profile = d.profile; renderToday(); toast("Ajustes guardados ✅");
+    } catch { toast("No se pudieron guardar"); }
+  });
+}
 
 /* ---------------- Sincronización al volver a la app ---------------- */
 document.addEventListener("visibilitychange", async () => {
