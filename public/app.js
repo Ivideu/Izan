@@ -1,11 +1,10 @@
 "use strict";
 
-const $ = (s, r = document) => r.querySelector(s);
-const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const $ = (s, r = document) => r.querySelector(s); const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const num = (n) => Math.round(Number(n) || 0);
 
-const LS = { pin: "pp_pin", cache: "pp_cache" };
+const LS = { cache: "pp_cache" };
 const state = {
   entries: [],
   profile: { name: "", age: 13, height: 160, weight: 69 },
@@ -18,9 +17,8 @@ const state = {
 async function api(path, opts = {}) {
   const res = await fetch(path, {
     ...opts,
-    headers: { "content-type": "application/json", "x-pin": localStorage.getItem(LS.pin) || "" },
+    headers: { "content-type": "application/json" },
   });
-  if (res.status === 401) { showGate("PIN incorrecto"); throw new Error("pin"); }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || "Algo ha fallado");
   return data;
@@ -39,7 +37,6 @@ async function loadAll() {
     try { localStorage.setItem(LS.cache, JSON.stringify(d)); } catch {}
     setSync(true);
   } catch (e) {
-    if (e.message === "pin") return false;
     try {
       const c = JSON.parse(localStorage.getItem(LS.cache) || "null");
       if (c) { state.entries = c.entries; state.profile = c.profile; }
@@ -49,24 +46,9 @@ async function loadAll() {
   return true;
 }
 
-/* ---------------- Gate (PIN) ---------------- */
-function showGate(msg = "") {
-  $("#app").hidden = true; $("#gate").hidden = false;
-  $("#gate-error").textContent = msg;
-  $("#gate-pin").focus();
-}
-$("#gate-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  localStorage.setItem(LS.pin, $("#gate-pin").value.trim());
-  $("#gate-pin").value = "";
-  await start();
-});
-
 async function start() {
-  if (!localStorage.getItem(LS.pin)) return showGate();
-  const ok = await loadAll();
-  if (!ok) return;
-  $("#gate").hidden = true; $("#app").hidden = false;
+  await loadAll();
+  $("#app").hidden = false;
   renderAll();
 }
 
@@ -139,12 +121,7 @@ function resetScan() {
   state.image = null; state.thumb = null;
   $("#photo").value = ""; $("#desc").value = "";
   $("#preview").hidden = true; $("#drop-empty").hidden = false;
-  $("#reset").hidden = true; $("#result").innerHTML = "";
-}
-
-/* ---------------- Chips ---------------- */
-function renderChips() {
-  $$("#meal-chips .chip").forEach((c) => c.classList.toggle("is-on", c.dataset.meal === state.meal));
+  $("#reset").hidden = true; $("#result").innerHTML = ""; }  /* ---------------- Chips ---------------- */ function renderChips() {   $$("#meal-chips .chip").forEach((c) => c.classList.toggle("is-on", c.dataset.meal === state.meal));
 }
 $("#meal-chips").addEventListener("click", (e) => {
   const c = e.target.closest(".chip"); if (!c) return;
@@ -182,7 +159,7 @@ $("#analyze").addEventListener("click", async () => {
       renderToday(); renderHistory();
     }
   } catch (e) {
-    if (e.message !== "pin") $("#result").innerHTML = `<div class="ask">😕 ${esc(e.message)}</div>`;
+    $("#result").innerHTML = `<div class="ask">😕 ${esc(e.message)}</div>`;
   } finally {
     clearInterval(timer); btn.disabled = false;
     $("#loading").hidden = true; $("#drop").classList.remove("scanning");
@@ -257,7 +234,6 @@ function renderToday() {
   const sum = (k) => list.reduce((a, e) => a + num(e.result?.nutrition?.[k]), 0);
   const greens = state.entries.filter((e) => Date.now() - e.ts < 7 * 864e5 && e.result?.light === "green").length;
 
-  // semana: últimos 7 días
   const days = [...Array(7)].map((_, i) => Date.now() - (6 - i) * 864e5);
   const week = days.map((ts) => {
     const k = dayKey(ts);
@@ -323,8 +299,8 @@ $("#history").addEventListener("click", async (e) => {
 
 /* ---------------- Navegación ---------------- */
 function go(view) {
-  $$(".tab").forEach((t) => t.classList.toggle("is-on", t.dataset.view === view));
-  $$(".view").forEach((v) => v.classList.toggle("is-on", v.id === "view-" + view));
+  $$(".tab").forEach((t) => t.classList.toggle("is-on", t.dataset.view === view));   $$
+(".view").forEach((v) => v.classList.toggle("is-on", v.id === "view-" + view));
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 $("#tabs").addEventListener("click", (e) => { const t = e.target.closest(".tab"); if (t) go(t.dataset.view); });
@@ -333,7 +309,7 @@ document.addEventListener("click", (e) => { const g = e.target.closest("[data-go
 /* ---------------- Ajustes ---------------- */
 $("#open-settings").addEventListener("click", () => {
   const p = state.profile;
-  $("#s-name").value = p.name || ""; $("#s-age").value = p.age; $("#s-height").value = p.height; $("#s-weight").value = p.weight;
+  $("#s-name").value = p.name \vert{}\vert{} ""; $("#s-age").value = p.age; $("#s-height").value = p.height; $("#s-weight").value = p.weight;
   $("#settings").showModal();
 });
 $("#settings-form").addEventListener("submit", async (e) => {
@@ -343,10 +319,6 @@ $("#settings-form").addEventListener("submit", async (e) => {
     const d = await api("/api/history", { method: "PUT", body: JSON.stringify({ profile }) });
     state.profile = d.profile; renderToday(); toast("Ajustes guardados ✅");
   } catch { toast("No se pudieron guardar"); }
-});
-$("#logout").addEventListener("click", () => {
-  localStorage.removeItem(LS.pin); localStorage.removeItem(LS.cache);
-  $("#settings").close(); showGate();
 });
 
 /* ---------------- Sincronización al volver a la app ---------------- */

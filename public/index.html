@@ -13,19 +13,7 @@
 </head>
 <body>
 
-<!-- PIN familiar -->
-<div id="gate" class="gate" hidden>
-  <form class="gate-card" id="gate-form">
-    <div class="gate-emoji">🔐</div>
-    <h1>PlatoPower</h1>
-    <p>Escribe el PIN de la familia para entrar.</p>
-    <input id="gate-pin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="PIN" required>
-    <p class="gate-error" id="gate-error"></p>
-    <button class="btn btn-main" type="submit">Entrar</button>
-  </form>
-</div>
-
-<div class="app" id="app" hidden>
+<div class="app" id="app">
   <header class="top">
     <div class="brand"><span class="brand-dot">🥗</span><span id="hello">PlatoPower</span></div>
     <nav class="tabs" id="tabs" aria-label="Secciones">
@@ -57,7 +45,7 @@
           </div>
           <span class="scan-line" aria-hidden="true"></span>
         </label>
-        <input id="photo" type="file" accept="image/*" hidden>
+        <input id="photo" type="file" accept="image/*" capture="environment" hidden>
 
         <div class="chips" id="meal-chips" role="radiogroup" aria-label="Momento del día">
           <button class="chip" data-meal="Desayuno">🥣 Desayuno</button>
@@ -109,7 +97,6 @@
     <div class="actions">
       <button class="btn btn-main" value="save" id="s-save">Guardar</button>
       <button class="btn btn-ghost" value="cancel">Cerrar</button>
-      <button class="btn btn-ghost danger" type="button" id="logout">Salir de este dispositivo</button>
     </div>
   </form>
 </dialog>
