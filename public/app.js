@@ -136,7 +136,12 @@ function resetScan() {
   if ($("#preview")) { $("#preview").hidden = true; $("#preview").src = ""; }
   if ($("#drop-empty")) $("#drop-empty").hidden = false;
   if ($("#reset")) $("#reset").hidden = true;
-  if ($("#result")) $("#result").innerHTML = ""; }  /* ---------------- Chips ---------------- */ function renderChips() {   $$("#meal-chips .chip").forEach((c) => c.classList.toggle("is-on", c.dataset.meal === state.meal));
+  if ($("#result")) $("#result").innerHTML = "";
+}
+
+/* ---------------- Chips ---------------- */
+function renderChips() {
+  $$("#meal-chips .chip").forEach((c) => c.classList.toggle("is-on", c.dataset.meal === state.meal));
 }
 
 const mealChips = $("#meal-chips");
@@ -328,8 +333,8 @@ if (historyEl) {
 
 /* ---------------- Navegación ---------------- */
 function go(view) {
-  $$(".tab").forEach((t) => t.classList.toggle("is-on", t.dataset.view === view));   $$
-(".view").forEach((v) => v.classList.toggle("is-on", v.id === "view-" + view));
+  $$(".tab").forEach((t) => t.classList.toggle("is-on", t.dataset.view === view));
+  $$(".view").forEach((v) => v.classList.toggle("is-on", v.id === "view-" + view));
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -351,7 +356,7 @@ const openSettingsEl = $("#open-settings");
 if (openSettingsEl) {
   openSettingsEl.addEventListener("click", () => {
     const p = state.profile;
-    $("#s-name").value = p.name \vert{}\vert{} ""; $("#s-age").value = p.age; $("#s-height").value = p.height; $("#s-weight").value = p.weight;
+    $("#s-name").value = p.name || ""; $("#s-age").value = p.age; $("#s-height").value = p.height; $("#s-weight").value = p.weight;
     $("#settings").showModal();
   });
 }
