@@ -1,0 +1,10 @@
+{
+  "name": "platopower",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Analiza tus platos con una foto y guarda el historial sincronizado entre móvil y ordenador.",
+  "type": "module",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}
